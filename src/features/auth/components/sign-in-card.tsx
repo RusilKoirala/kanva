@@ -9,6 +9,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 
 import { FcGoogle } from "react-icons/fc";
 
+import { useLogin } from "@/features/auth/api/use-login"
+
 import { FaGithub } from "react-icons/fa";
 
 import { DottedSeparator } from "@/components/dotted-separator";
@@ -33,6 +35,8 @@ const formSchema = z.object({
 type SignInValues = z.infer<typeof formSchema>;
 
 const SignInCard = () => {
+  const { mutate } = useLogin();
+
   const form = useForm<SignInValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -42,8 +46,7 @@ const SignInCard = () => {
   });
 
   const onSubmit = (values: SignInValues) => {
-   
-    console.log(values);
+    mutate({ json: values });
   };
 
   const isSubmitting = form.formState.isSubmitting;
