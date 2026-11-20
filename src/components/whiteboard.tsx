@@ -4,7 +4,6 @@ import { ShapeView } from "@/features/whiteboard/components/shape";
 import { Toolbar } from "@/features/whiteboard/components/toolbar";
 import { useWhiteboard } from "@/features/whiteboard/hooks/use-whiteboard";
 import { getBounds } from "@/features/whiteboard/schema";
-import { Barcode } from "lucide-react";
 import { useRef } from "react";
 
 function download(content: string, filename: string, mimeType: string) {

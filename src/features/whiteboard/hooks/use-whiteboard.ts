@@ -10,8 +10,6 @@ import type {
 import { documentSchema} from "../schema"
 
 import type {Point , Shape, Tool} from "../schema"
-import { JSONSchema } from "zod/v4/core";
-import { el } from "date-fns/locale";
 
 const STORAGE_KEY = "kanva-whiteboard-v1"
 

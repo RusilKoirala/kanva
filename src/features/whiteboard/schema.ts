@@ -1,7 +1,4 @@
-import { X } from "lucide-react";
-import { version } from "react";
 import { z } from "zod";
-import he from "zod/v4/locales/he.cjs";
 
 
 const pointSchema = z.object({

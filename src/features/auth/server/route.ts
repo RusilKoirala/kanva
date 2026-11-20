@@ -7,7 +7,7 @@ const app = new Hono()
         email: z.string().email(),
         password: z.string(),
       })),(c) => {
-      const { email, password } = c.req.valid("json");
+      c.req.valid("json"); // TODO: use email + password once auth is wired up
 
       return c.json({
         success: "ok",

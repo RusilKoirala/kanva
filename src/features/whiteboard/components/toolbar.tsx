@@ -1,7 +1,6 @@
 import {
   Circle,
   Eraser,
-  Icon,
   Minus,
   MousePointer2,
   Pencil,
@@ -10,7 +9,6 @@ import {
   Undo2,
 } from "lucide-react";
 import type { Tool } from "../schema";
-import { buttonVariants } from "@/components/ui/button";
 
 // yes i wrote all the tools :) , hi reviewer i appreciate u reading my awsome code
 const tools = [

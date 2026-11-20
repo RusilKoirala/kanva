@@ -5,11 +5,10 @@ import { handle } from "hono/vercel"
 
 const app = new Hono().basePath("/api");
 
-const routes = app
-    .route("/auth", auth)
+const routes = app.route("/auth", auth)
 
 
 
-export const GET = handle(app)
+export const GET = handle(routes)
 
 export type AppType = typeof routes;
