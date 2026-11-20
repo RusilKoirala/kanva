@@ -12,6 +12,7 @@ import { documentSchema} from "../schema"
 import type {Point , Shape, Tool} from "../schema"
 import { JSONSchema } from "zod/v4/core";
 import { json } from "zod";
+import { el } from "date-fns/locale";
 
 const STORAGE_KEY = "kanva-whiteboard-v1"
 
@@ -390,8 +391,65 @@ export function useWhiteboard() {
     }
 
     const shortcuts: Record<string, Tool> = {
-        
+        v: "select",
+        p: 'pen',
+        r: "rectangle",
+        o: "ellipse",
+        l: "line",
+        e: "erase",
+    };
+    if (shortcuts[key]) {
+        event.preventDefault();
+        cancelGesture();
+        setSelectedId(null)
+        setTool(shortcuts[key])
     }
+   }
+
+
+   function loadDocument(raw: string) {
+    try {
+        const parsed = documentSchema.safeParse(JSON.parse(raw));
+
+        if (!parsed.success) {
+            throw new Error("Invalid Drawing");
+        }
+
+        cancelGesture();
+        commit(parsed.data.elements)
+        setSelectedId(null)
+        setNotice("drawing are back my boii :)")
+    } catch  {
+        setNotice("that file is not valid bruh")
+    }
+   }
+
+   return {
+    ready,
+    shapes,
+    elements,
+    tool,
+    color,
+    strokeWidth,
+    selectedId,
+    notice,
+    canUndo: history.past.length > 0,
+    canRedo: history.future.length > 0,
+    setTool: (next:Tool) => {
+        setTool(next)
+        setSelectedId(null)
+    },
+    changeColor,
+    changeStrokeWidth,
+    undo,
+    redo,
+    loadDocument,
+    setNotice,
+    onpointerdown,
+    onpointermove,
+    onpointerup,
+    onpointercancel: cancelGesture,
+    onkeydown,
    }
 }
 
