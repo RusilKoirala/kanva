@@ -191,8 +191,28 @@ export function Whiteboard() {
           {board.elements.map((shape) => {
             <ShapeView key={shape.id} shape={shape} />;
           })}
+
+          {bounds && (
+            <rect
+              data-selection="true"
+              x={bounds.x - 7}
+              y={bounds.y - 7}
+              width={bounds.width + 14}
+              height={bounds.height + 14}
+              fill="none"
+              stroke="#7c3aed"
+              strokeWidth={1.5}
+              strokeDasharray="6 4"
+              pointerEvents="none"
+            />
+          )}
         </svg>
       </section>
+
+      <footer className="flex flex-wrap items-center justify-between gap-2 border-t border-stone-200 bg-white px-4 py-2 text-xs text-stone-500">
+        <p role="status">{board.notice}</p>
+        <p>Thanks for using a this amazinggg app</p>
+      </footer>
     </main>
   );
 }
