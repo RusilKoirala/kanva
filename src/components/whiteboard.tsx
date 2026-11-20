@@ -5,9 +5,7 @@ import { Toolbar } from "@/features/whiteboard/components/toolbar";
 import { useWhiteboard } from "@/features/whiteboard/hooks/use-whiteboard";
 import { getBounds } from "@/features/whiteboard/schema";
 import { Barcode } from "lucide-react";
-import { event } from "next/dist/build/output/log";
 import { useRef } from "react";
-import { file } from "zod";
 
 function download(content: string, filename: string, mimeType: string) {
   const blob = new Blob([content], {
@@ -55,7 +53,7 @@ export function Whiteboard() {
 
     clone
       .querySelectorAll("[data-selection]")
-      .forEach((element) => element.remove);
+      .forEach((element) => element.remove());
 
     clone.removeAttribute("class");
 
@@ -69,7 +67,7 @@ export function Whiteboard() {
     download(
       new XMLSerializer().serializeToString(clone),
       "kanva.svg",
-      "image/svg+xsml",
+      "image/svg+xml",
     );
 
     board.setNotice("drawing exported as svg :D");
@@ -113,7 +111,7 @@ export function Whiteboard() {
 
         <input
           ref={fileRef}
-          type="type"
+          type="file"
           accept=".json,application/json"
           className="hidden"
           aria-label="Import drawing boii"
@@ -168,29 +166,29 @@ export function Whiteboard() {
                   ? "not-allowed"
                   : "crosshair",
           }}
-          onPointerDown={board.onpointerdown}
-          onPointerMove={board.onpointermove}
-          onPointerUp={board.onpointercancel}
-          onPointerCancel={board.onpointercancel}
-          onLostPointerCapture={board.onpointercancel}
-          onKeyDown={board.onkeydown}
+          onPointerDown={board.onPointerDown}
+          onPointerMove={board.onPointerMove}
+          onPointerUp={board.onPointerUp}
+          onPointerCancel={board.onPointerCancel}
+          onLostPointerCapture={board.onPointerCancel}
+          onKeyDown={board.onKeyDown}
         >
           <defs>
             <pattern
               id="kanva-dots"
               width="24"
               height="24"
-              patternUnits="useSpaceOnUse"
+              patternUnits="userSpaceOnUse"
             >
               <circle cx="12" cy="12" r="1" fill="#d6d3d1" />
             </pattern>
           </defs>
 
-          <rect width="1600" height="1000" fill="url(#kanva-dots" />
+          <rect width="1600" height="1000" fill="url(#kanva-dots)" />
 
-          {board.elements.map((shape) => {
-            <ShapeView key={shape.id} shape={shape} />;
-          })}
+          {board.elements.map((shape) => (
+            <ShapeView key={shape.id} shape={shape} />
+          ))}
 
           {bounds && (
             <rect

@@ -4,7 +4,7 @@ import { zValidator } from "@hono/zod-validator";
 
 const app = new Hono()
   .post("/login", zValidator("json", z.object({
-        email: z.email(),
+        email: z.string().email(),
         password: z.string(),
       })),(c) => {
       const { email, password } = c.req.valid("json");

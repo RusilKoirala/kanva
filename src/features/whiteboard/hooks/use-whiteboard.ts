@@ -11,7 +11,6 @@ import { documentSchema} from "../schema"
 
 import type {Point , Shape, Tool} from "../schema"
 import { JSONSchema } from "zod/v4/core";
-import { json } from "zod";
 import { el } from "date-fns/locale";
 
 const STORAGE_KEY = "kanva-whiteboard-v1"
@@ -227,9 +226,7 @@ export function useWhiteboard() {
 
         if (tool === "erase" ) {
             if (hit) {
-                commit(shapes.filter((shape)=>{
-                    shape.id !== hit.id
-                }))
+                commit(shapes.filter((shape) => shape.id !== hit.id))
             }
             setSelectedId(null);
             return
@@ -307,9 +304,9 @@ export function useWhiteboard() {
                 y: active.shape.y + dy,
             }
 
-            active.latest = active.base.map((shape)=>{
-                shape.id === moved.id ? moved: shape
-            })
+            active.latest = active.base.map((shape) =>
+                shape.id === moved.id ? moved : shape
+            )
         } else {
             let updated: Shape;
 
@@ -445,11 +442,11 @@ export function useWhiteboard() {
     redo,
     loadDocument,
     setNotice,
-    onpointerdown,
-    onpointermove,
-    onpointerup,
-    onpointercancel: cancelGesture,
-    onkeydown,
+    onPointerDown,
+    onPointerMove,
+    onPointerUp,
+    onPointerCancel: cancelGesture,
+    onKeyDown,
    }
 }
 

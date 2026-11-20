@@ -11,7 +11,6 @@ import {
 } from "lucide-react";
 import type { Tool } from "../schema";
 import { buttonVariants } from "@/components/ui/button";
-import { event } from "next/dist/build/output/log";
 
 // yes i wrote all the tools :) , hi reviewer i appreciate u reading my awsome code
 const tools = [
