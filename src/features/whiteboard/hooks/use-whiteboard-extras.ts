@@ -470,6 +470,20 @@ export function useWhiteboardExtras(
 
     const shape = board.shapes.find((item) => item.id === id);
 
+    if (shape?.kind === "arrow") {
+      const label = window.prompt("Arrow label", shape.text ?? "");
+
+      if (label !== null) {
+        board.commit(
+          board.shapes.map((item) =>
+            item.id === shape.id ? { ...item, text: label.slice(0, 80) } : item,
+          ),
+        );
+      }
+
+      return;
+    }
+
     if (shape && (shape.kind === "text" || shape.kind === "note")) {
       setEditing({
         shape,

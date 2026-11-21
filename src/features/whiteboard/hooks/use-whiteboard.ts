@@ -383,6 +383,7 @@ export function useWhiteboard() {
       e: "erase",
       t: "text",
       n: "note",
+      a: "arrow",
     };
     if (shortcuts[key]) {
       event.preventDefault();

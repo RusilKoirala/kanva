@@ -67,7 +67,7 @@ export function resizeShape(
 
   let height = Math.max(minimum, north ? anchorY - point.y : point.y - anchorY);
 
-  if (keepRatio || shape.kind === "text") {
+  if (keepRatio || shape.kind === "text" || shape.kind === "image") {
     const ratio = Math.max(1, bounds.width) / Math.max(1, bounds.height);
 
     if (width / height > ratio) {
@@ -85,7 +85,9 @@ export function resizeShape(
       12,
       Math.min(
         72,
-        Math.round(((shape.fontSize ?? 20) * width) / Math.max(1, bounds.width)),
+        Math.round(
+          ((shape.fontSize ?? 20) * width) / Math.max(1, bounds.width),
+        ),
       ),
     );
 
@@ -114,7 +116,7 @@ export function resizeShape(
     };
   }
 
-  if (shape.kind === "line") {
+  if (shape.kind === "line" || shape.kind === "arrow") {
     return {
       ...shape,
       x: shape.width < 0 ? x + width : x,
