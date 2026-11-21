@@ -321,12 +321,10 @@ export function useWhiteboard() {
     setPreview(active.latest);
   }
 
-  function onPointerUp(event: ReactPointerEvent<SVGSVGElement>) {
+  function finishGesture(pointerId: number) {
     const active = gesture.current;
 
-    if (!active || active.pointerId !== event.pointerId) return;
-
-    onPointerMove(event);
+    if (!active || active.pointerId !== pointerId) return;
 
     gesture.current = null;
 
@@ -339,6 +337,21 @@ export function useWhiteboard() {
       Math.abs(active.shape.width) + Math.abs(active.shape.height) < 2;
 
     if (!tooSmall) commit(active.latest);
+  }
+
+  function onPointerUp(event: ReactPointerEvent<SVGSVGElement>) {
+    onPointerMove(event);
+    finishGesture(event.pointerId);
+  }
+
+  function onLostPointerCapture(event: ReactPointerEvent<SVGSVGElement>) {
+    // Capture-loss events do not carry a reliable final drawing position.
+    finishGesture(event.pointerId);
+  }
+
+  function onPointerCancel(event?: ReactPointerEvent<SVGSVGElement>) {
+    if (event) finishGesture(event.pointerId);
+    else cancelGesture();
   }
 
   function onKeyDown(event: ReactKeyboardEvent<SVGSVGElement>) {
@@ -446,7 +459,8 @@ export function useWhiteboard() {
     onPointerDown,
     onPointerMove,
     onPointerUp,
-    onPointerCancel: cancelGesture,
+    onPointerCancel,
+    onLostPointerCapture,
     onKeyDown,
   };
 }

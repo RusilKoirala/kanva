@@ -1,16 +1,15 @@
 "use client";
 
-import { act, useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import type { KeyboardEvent, PointerEvent } from "react";
 
-import { getBounds, shapeSchema } from "../schema";
+import { getBounds } from "../schema";
 
 import type { Point, Shape } from "../schema";
 import type { useWhiteboard } from "./use-whiteboard";
 
 import type { useWhiteboardExtras } from "./use-whiteboard-extras";
-import { ca } from "zod/v4/locales";
 
 type BoardApi = ReturnType<typeof useWhiteboard>;
 type ExtrasApi = ReturnType<typeof useWhiteboardExtras>;
@@ -53,9 +52,9 @@ function getPoint(event: PointerEvent<SVGSVGElement>): Point | null {
 function makeBox(start: Point, end: Point): SelectionBox {
   return {
     x: Math.min(start.x, end.x),
-    y: Math.min(start.x, end.y),
+    y: Math.min(start.y, end.y),
     width: Math.abs(end.x - start.x),
-    height: Math.abs(end.y - start.x),
+    height: Math.abs(end.y - start.y),
   };
 }
 
@@ -105,7 +104,7 @@ export function useMultiSelect(board: BoardApi, extras: ExtrasApi) {
   }, [board.tool, cancel]);
 
   function selectIds(next: string[]) {
-    const unique = [...new Set(next)];
+    const unique = Array.from(new Set(next));
 
     setIds(unique);
     board.selectShape(unique.length === 1 ? unique[0] : null);
@@ -161,7 +160,7 @@ export function useMultiSelect(board: BoardApi, extras: ExtrasApi) {
       return;
     }
 
-    if (hit && selectIds.length > 1 && selectedIds.includes(hit.id)) {
+    if (hit && selectedIds.length > 1 && selectedIds.includes(hit.id)) {
       event.preventDefault();
       event.currentTarget.focus();
 
@@ -184,9 +183,9 @@ export function useMultiSelect(board: BoardApi, extras: ExtrasApi) {
         event.preventDefault();
         event.currentTarget.focus();
 
-        const initialIds = event.shiftKey ? selectIds : [];
+        const initialIds = event.shiftKey ? selectedIds : [];
 
-        gesture.current {
+        gesture.current = {
             mode: "box",
             pointerId: event.pointerId,
             start: point,
@@ -265,7 +264,28 @@ export function useMultiSelect(board: BoardApi, extras: ExtrasApi) {
   }
 
 
-  function onPointerCancel() {
+  function onLostPointerCapture(event: PointerEvent<SVGSVGElement>) {
+    const active = gesture.current;
+
+    if (active) {
+        if (active.pointerId !== event.pointerId) return;
+
+        if (active.mode === "move") {
+            board.commit(active.latest);
+        }
+
+        cancel();
+    }
+
+    extras.onLostPointerCapture(event);
+  }
+
+  function onPointerCancel(event?: PointerEvent<SVGSVGElement>) {
+    if (event) {
+        onLostPointerCapture(event);
+        return;
+    }
+
     const active = gesture.current;
 
     if (active?.mode === "box") {
@@ -326,7 +346,7 @@ export function useMultiSelect(board: BoardApi, extras: ExtrasApi) {
         return
     }
 
-    if (command && key === "d" && selectIds.length) {
+    if (command && key === "d" && selectedIds.length) {
         event.preventDefault();
         cancel();
         duplicateSelection();
@@ -335,14 +355,14 @@ export function useMultiSelect(board: BoardApi, extras: ExtrasApi) {
 
     if (
         !command &&
-        (event.key === "Delete" || event.key === "Backspace") && selectIds.length
+        (event.key === "Delete" || event.key === "Backspace") && selectedIds.length
     ) {
         event.preventDefault();
         deleteSelection();
         return;
     }
 
-    if (event.key === "Escape" || (command && (key === "z" || key ===" y"))) {
+    if (event.key === "Escape" || (command && (key === "z" || key === "y"))) {
         cancel();
     }
 
@@ -360,11 +380,12 @@ export function useMultiSelect(board: BoardApi, extras: ExtrasApi) {
     selectOnly,
     clearSelection,
     duplicateSelection,
+    deleteSelection,
     onPointerDown,
-    onPointerMove,
     onPointerMove,
     onPointerUp,
     onPointerCancel,
+    onLostPointerCapture,
     onKeyDown,
   }
 }

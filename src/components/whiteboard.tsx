@@ -141,9 +141,9 @@ export function Whiteboard() {
 
             if (!file) return;
 
-            if (file.size > 2_000_000) {
+            if (file.size > 8_000_000) {
               board.setNotice(
-                "pls choose smaller json our system is very small for that (>2MB)",
+                "pls choose smaller json our system is very small for that (>8MB)",
               );
               return;
             }
@@ -185,7 +185,10 @@ export function Whiteboard() {
         <button
           className="border border-stone-300 px-2 py-1"
           aria-pressed={board.tool === "arrow"}
-          onClick={() => imageRef.current?.click()}
+          onClick={() => {
+            selection.clearSelection();
+            extras.changeTool("arrow");
+          }}
         >
           Arrow A
         </button>
@@ -253,12 +256,12 @@ export function Whiteboard() {
                   ? "not-allowed"
                   : "crosshair",
           }}
-          onPointerDown={extras.onPointerDown}
-          onPointerMove={extras.onPointerMove}
-          onPointerUp={extras.onPointerUp}
-          onPointerCancel={extras.onPointerCancel}
-          onLostPointerCapture={extras.onPointerCancel}
-          onKeyDown={extras.onKeyDown}
+          onPointerDown={selection.onPointerDown}
+          onPointerMove={selection.onPointerMove}
+          onPointerUp={selection.onPointerUp}
+          onPointerCancel={selection.onPointerCancel}
+          onLostPointerCapture={selection.onLostPointerCapture}
+          onKeyDown={selection.onKeyDown}
           onDoubleClick={extras.onDoubleClick}
         >
           <defs>
@@ -281,57 +284,62 @@ export function Whiteboard() {
           />
 
           <g ref={contentRef}>
-            {extras.elements.map((shape) => (
+            {selection.element.map((shape) => (
               <ShapeView key={shape.id} shape={shape} />
             ))}
           </g>
 
-          {bounds && !extras.editing && board.tool === "select" && (
-            <g data-selection="true">
-              <rect
-                x={bounds.x}
-                y={bounds.y}
-                width={Math.max(1, bounds.width)}
-                height={Math.max(1, bounds.height)}
-                fill="none"
-                stroke="#7c3aed"
-                strokeWidth={1.5 / extras.zoom}
-                strokeDasharray={`${6 / extras.zoom} ${4 / extras.zoom}`}
-                pointerEvents="none"
-              />
+          {bounds &&
+            !extras.editing &&
+            !selection.marquee &&
+            selection.selectedIds.length <= 1 &&
+            board.tool === "select" && (
+              <g data-selection="true">
+                <rect
+                  x={bounds.x}
+                  y={bounds.y}
+                  width={Math.max(1, bounds.width)}
+                  height={Math.max(1, bounds.height)}
+                  fill="none"
+                  stroke="#7c3aed"
+                  strokeWidth={1.5 / extras.zoom}
+                  strokeDasharray={`${6 / extras.zoom} ${4 / extras.zoom}`}
+                  pointerEvents="none"
+                />
 
-              {(["nw", "ne", "sw", "se"] as const).map((corner) => {
-                const size = 12 / extras.zoom;
-                const x = corner.endsWith("w")
-                  ? bounds.x
-                  : bounds.x + bounds.width;
+                {(["nw", "ne", "sw", "se"] as const).map((corner) => {
+                  const size = 12 / extras.zoom;
+                  const x = corner.endsWith("w")
+                    ? bounds.x
+                    : bounds.x + bounds.width;
 
-                const y = corner.startsWith("n")
-                  ? bounds.y
-                  : bounds.y + bounds.height;
+                  const y = corner.startsWith("n")
+                    ? bounds.y
+                    : bounds.y + bounds.height;
 
-                return (
-                  <rect
-                    key={corner}
-                    data-corner={corner}
-                    x={x - size / 2}
-                    y={y - size / 2}
-                    width={size}
-                    height={size}
-                    fill="white"
-                    stroke="#7c3aed"
-                    strokeWidth={1 / 5 / extras.zoom}
-                    style={{
-                      cursor:
-                        corner === "nw" || corner === "se"
-                          ? "nwse-resize"
-                          : "nesw-resize",
-                    }}
-                  />
-                );
-              })}
-            </g>
-          )}
+                  return (
+                    <rect
+                      key={corner}
+                      data-corner={corner}
+                      x={x - size / 2}
+                      y={y - size / 2}
+                      width={size}
+                      height={size}
+                      fill="white"
+                      stroke="#7c3aed"
+                      strokeWidth={1 / 5 / extras.zoom}
+                      style={{
+                        cursor:
+                          corner === "nw" || corner === "se"
+                            ? "nwse-resize"
+                            : "nesw-resize",
+                      }}
+                    />
+                  );
+                })}
+              </g>
+            )}
+          <SelectionOverlay selection={selection} zoom={extras.zoom} />
         </svg>
 
         {extras.editing && (

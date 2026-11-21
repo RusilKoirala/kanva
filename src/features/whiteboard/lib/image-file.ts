@@ -1,7 +1,3 @@
-import { Scale } from "lucide-react";
-import { error } from "next/dist/build/output/log";
-import { maximum } from "zod/v4-mini";
-
 // preparing your amazing image into a DATA I CAN USE in that canvas OwO
 export async function prepareImage(file: File) {
   if (!/^image\/(png|jpeg|webp)$/.test(file.type)) {

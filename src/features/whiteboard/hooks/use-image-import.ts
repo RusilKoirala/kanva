@@ -7,7 +7,6 @@ import { prepareImage } from "../lib/image-file";
 
 import type { useWhiteboard } from "./use-whiteboard";
 import type { useWhiteboardExtras } from "./use-whiteboard-extras";
-import { error } from "next/dist/build/output/log";
 import { Shape } from "../schema";
 
 type BoardApi = ReturnType<typeof useWhiteboard>;

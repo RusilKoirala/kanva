@@ -434,24 +434,34 @@ export function useWhiteboardExtras(
 
   function onPointerUp(event: PointerEvent<SVGSVGElement>) {
     const active = gesture.current;
+    if (active && active.pointerId !== event.pointerId) return;
+
+    onPointerMove(event);
+    onLostPointerCapture(event);
+  }
+
+  function onLostPointerCapture(event: PointerEvent<SVGSVGElement>) {
+    const active = gesture.current;
     if (active) {
       if (active.pointerId !== event.pointerId) return;
 
-      onPointerMove(event);
-
+      gesture.current = null;
+      setPreview(null);
       if (active.mode === "resize") {
         board.commit(active.latest);
       }
-
-      gesture.current = null;
-      setPreview(null);
-      return;
     }
-    board.onPointerUp(event);
 
     if (forwardedPointer.current === event.pointerId) {
       forwardedPointer.current = null;
     }
+
+    board.onLostPointerCapture(event);
+  }
+
+  function onPointerCancel(event?: PointerEvent<SVGSVGElement>) {
+    if (event) onLostPointerCapture(event);
+    else cancelPointer();
   }
 
   function cancelPointer() {
@@ -536,7 +546,8 @@ export function useWhiteboardExtras(
     onPointerDown,
     onPointerMove,
     onPointerUp,
-    onPointerCancel: cancelPointer,
+    onPointerCancel,
+    onLostPointerCapture,
     onDoubleClick,
     onKeyDown,
   };
