@@ -1,4 +1,3 @@
-import he from "zod/v4/locales/he.cjs";
 import { getBounds } from "../schema";
 import type { Shape } from "../schema";
 
@@ -39,8 +38,8 @@ export function makeSvg(
   const source =
     `<svg xmlns="http://www.w3.org/2000/svg" ` +
     `width="${width}" height="${height}" ` +
-    `viewBox="${x} ${y} ${width} ${height}"`;
-  +background + contents + "</svg>";
+    `viewBox="${x} ${y} ${width} ${height}">` +
+    background + contents + "</svg>";
 
   return { source, width, height };
 }

@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { KeyboardEvent, MouseEvent, PointerEvent, RefObject } from "react";
 
-import { shapeSchema, type Point, type Shape, type Tool } from "../schema";
+import type { Point, Shape, Tool } from "../schema";
 
 import { fitText, resizeShape } from "../lib/geometry";
 
@@ -12,8 +12,6 @@ import type { Corner } from "../lib/geometry";
 import type { useWhiteboard } from "./use-whiteboard";
 
 import { useBoardLibrary } from "./use-board-library";
-import { Item } from "@radix-ui/react-dropdown-menu";
-import { resize } from "next/dist/server/lib/squoosh/impl";
 
 type BoardApi = ReturnType<typeof useWhiteboard>;
 
@@ -32,7 +30,7 @@ type Editing = {
 type ExtraGesture =
   | {
       mode: "pan";
-      pointerID: number;
+      pointerId: number;
       inverse: DOMMatrix;
       start: Point;
       view: View;
@@ -91,6 +89,8 @@ export function useWhiteboardExtras(
   const gesture = useRef<ExtraGesture | null>(null);
   const forwardedPointer = useRef<number | null>(null);
   const spaceDown = useRef(false);
+
+  const externalGesture = useRef(false);
 
   let elements = preview ?? board.elements;
 
@@ -159,7 +159,11 @@ export function useWhiteboardExtras(
     function wheel(event: WheelEvent) {
       event.preventDefault();
 
-      if (gesture.current || forwardedPointer.current !== null) {
+      if (
+        gesture.current ||
+        forwardedPointer.current !== null ||
+        externalGesture.current
+      ) {
         return;
       }
 
@@ -312,7 +316,7 @@ export function useWhiteboardExtras(
 
       gesture.current = {
         mode: "pan",
-        pointerID: event.pointerId,
+        pointerId: event.pointerId,
         start: { x: start.x, y: start.y },
         inverse,
         view: { ...viewRef.current },
@@ -421,8 +425,8 @@ export function useWhiteboardExtras(
       event.shiftKey,
     );
 
-    active.latest = active.base((shape) =>
-      shape.id === resize.id ? resize : shape,
+    active.latest = active.base.map((shape) =>
+      shape.id === resized.id ? resized : shape,
     );
 
     setPreview(active.latest);
@@ -431,7 +435,7 @@ export function useWhiteboardExtras(
   function onPointerUp(event: PointerEvent<SVGSVGElement>) {
     const active = gesture.current;
     if (active) {
-      if (active.pointerID !== event.pointerId) return;
+      if (active.pointerId !== event.pointerId) return;
 
       onPointerMove(event);
 
@@ -504,9 +508,20 @@ export function useWhiteboardExtras(
     applyEditing,
     cancelEditing: () => setEditing(null),
     resetView: () => setView(INITIAL_VIEW),
+
+    isSpaceDown: () => spaceDown.current,
+    isInteracting: () =>
+      !!gesture.current ||
+      forwardedPointer.current !== null ||
+      externalGesture.current,
+
+    setExternalGesture: (active: boolean) => {
+      externalGesture.current = active;
+    },
+
     onPointerDown,
     onPointerMove,
-    onpointerup,
+    onPointerUp,
     onPointerCancel: cancelPointer,
     onDoubleClick,
     onKeyDown,
