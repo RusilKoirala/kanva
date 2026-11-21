@@ -13,6 +13,7 @@ import type { useWhiteboard } from "./use-whiteboard";
 
 import { useBoardLibrary } from "./use-board-library";
 import { Item } from "@radix-ui/react-dropdown-menu";
+import { resize } from "next/dist/server/lib/squoosh/impl";
 
 type BoardApi = ReturnType<typeof useWhiteboard>;
 
@@ -284,5 +285,230 @@ export function useWhiteboardExtras(
     }
   }
 
-  function onPointerDown(event: PointerEvent<SVGSVGElement>) {}
+  function onPointerDown(event: PointerEvent<SVGSVGElement>) {
+    if (
+      !event.isPrimary ||
+      gesture.current ||
+      forwardedPointer.current !== null
+    ) {
+      return;
+    }
+    if (editing) return;
+
+    const svg = event.currentTarget;
+
+    if (event.button === 1 || (event.button === 0 && spaceDown.current)) {
+      const matrix = svg.getScreenCTM();
+
+      if (!matrix) return;
+
+      event.preventDefault();
+      svg.focus();
+
+      const inverse = matrix.inverse();
+      const start = new DOMPoint(event.clientX, event.clientY).matrixTransform(
+        inverse,
+      );
+
+      gesture.current = {
+        mode: "pan",
+        pointerID: event.pointerId,
+        start: { x: start.x, y: start.y },
+        inverse,
+        view: { ...viewRef.current },
+      };
+
+      svg.setPointerCapture(event.pointerId);
+      return;
+    }
+
+    if (event.button !== 0) return;
+
+    const point = pointAt(svg, event.clientX, event.clientY);
+
+    if (!point) return;
+
+    const handle = (event.target as Element).closest("[data-corner]");
+
+    if (handle && selected && board.tool === "select") {
+      event.preventDefault();
+      svg.focus();
+
+      gesture.current = {
+        mode: "resize",
+        pointerId: event.pointerId,
+        corner: handle.getAttribute("data-corner") as Corner,
+        shape: selected,
+        base: board.shapes,
+        latest: board.shapes,
+      };
+
+      svg.setPointerCapture(event.pointerId);
+      return;
+    }
+
+    if (board.tool === "text" || board.tool === "note") {
+      if (board.shapes.length >= 1000) {
+        board.setNotice("this board has 1000 shapes");
+        return;
+      }
+
+      event.preventDefault();
+
+      const note = board.tool === "note";
+
+      setEditing({
+        isNew: true,
+        shape: {
+          id: crypto.randomUUID(),
+          kind: note ? "note" : "text",
+          x: point.x,
+          y: point.y,
+          width: note ? 220 : 160,
+          height: note ? 180 : fontSize * 1.3,
+          color: board.color,
+          strokeWidth: board.strokeWidth,
+          points: [],
+          text: note ? "new note" : "",
+          fontSize,
+          fill: noteColor,
+        },
+      });
+
+      board.setTool("select");
+      return;
+    }
+
+    board.onPointerDown(event);
+
+    if (svg.hasPointerCapture(event.pointerId)) {
+      forwardedPointer.current = event.pointerId;
+    }
+  }
+
+  function onPointerMove(event: PointerEvent<SVGSVGElement>) {
+    const active = gesture.current;
+
+    if (!active) {
+      board.onPointerMove(event);
+      return;
+    }
+
+    if (active.pointerId !== event.pointerId) return;
+
+    if (active.mode === "pan") {
+      const point = new DOMPoint(event.clientX, event.clientY).matrixTransform(
+        active.inverse,
+      );
+
+      setView({
+        ...active.view,
+        x: active.view.x - (point.x - active.start.x),
+        y: active.view.y - (point.y - active.start.y),
+      });
+
+      return;
+    }
+
+    const point = pointAt(event.currentTarget, event.clientX, event.clientY);
+
+    if (!point) return;
+
+    const resized = resizeShape(
+      active.shape,
+      active.corner,
+      point,
+      event.shiftKey,
+    );
+
+    active.latest = active.base((shape) =>
+      shape.id === resize.id ? resize : shape,
+    );
+
+    setPreview(active.latest);
+  }
+
+  function onPointerUp(event: PointerEvent<SVGSVGElement>) {
+    const active = gesture.current;
+    if (active) {
+      if (active.pointerID !== event.pointerId) return;
+
+      onPointerMove(event);
+
+      if (active.mode === "resize") {
+        board.commit(active.latest);
+      }
+
+      gesture.current = null;
+      setPreview(null);
+      return;
+    }
+    board.onPointerUp(event);
+
+    if (forwardedPointer.current === event.pointerId) {
+      forwardedPointer.current = null;
+    }
+  }
+
+  function cancelPointer() {
+    gesture.current = null;
+    forwardedPointer.current = null;
+    setPreview(null);
+    board.onPointerCancel();
+  }
+
+  function onDoubleClick(event: MouseEvent<SVGSVGElement>) {
+    if (board.tool !== "select" || editing) return;
+
+    const target = (event.target as Element).closest("[data-shape-id]");
+
+    const id = target?.getAttribute("data-shape-id");
+
+    const shape = board.shapes.find((item) => item.id === id);
+
+    if (shape && (shape.kind === "text" || shape.kind === "note")) {
+      setEditing({
+        shape,
+        isNew: false,
+      });
+    }
+  }
+
+  function onKeyDown(event: KeyboardEvent<SVGSVGElement>) {
+    if (event.code === "Space") {
+      event.preventDefault();
+      return;
+    }
+    if (event.key === "Escape") {
+      cancelPointer();
+      setEditing(null);
+    }
+
+    board.onKeyDown(event);
+  }
+
+  return {
+    library,
+    elements,
+    selected,
+    editing,
+    view,
+    zoom,
+    fontSize: editing?.shape.fontSize ?? selected?.fontSize ?? fontSize,
+    noteColor: editing?.shape.fill ?? selected?.fill ?? noteColor,
+    changeTool,
+    changeText,
+    changeFontSize,
+    changeNoteColor,
+    changeColor,
+    applyEditing,
+    cancelEditing: () => setEditing(null),
+    resetView: () => setView(INITIAL_VIEW),
+    onPointerDown,
+    onPointerMove,
+    onpointerup,
+    onPointerCancel: cancelPointer,
+    onDoubleClick,
+    onKeyDown,
+  };
 }
