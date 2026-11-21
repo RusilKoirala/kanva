@@ -1,12 +1,44 @@
 import { getBounds } from "../schema";
 import type { Shape } from "../schema";
+import { textWidth } from "./geometry";
+
+function getExportBounds(shape: Shape) {
+  const bounds = getBounds(shape);
+
+  if (shape.kind !== "arrow") return bounds;
+
+  const padding = Math.max(12, shape.strokeWidth * 3);
+
+  let left = bounds.x - padding;
+  let top = bounds.y - padding;
+  let right = bounds.x + bounds.width + padding;
+  let bottom = bounds.y + bounds.height + padding;
+
+  if (shape.text) {
+    const width = textWidth(shape.text, 14);
+    const centerX = shape.x + shape.width / 2;
+    const baseline = shape.y + shape.height / 2 - 10;
+
+    left = Math.min(left, centerX - width / 2 - 4);
+    right = Math.max(right, centerX + width / 2 + 4);
+    top = Math.min(top, baseline - 16);
+    bottom = Math.max(bottom, baseline + 5);
+  }
+
+  return {
+    x: left,
+    y: top,
+    width: right - left,
+    height: bottom - top,
+  };
+}
 
 export function makeSvg(
   layer: SVGGElement,
   shapes: Shape[],
   transparent: boolean,
 ) {
-  const bounds = shapes.map(getBounds);
+  const bounds = shapes.map(getExportBounds);
 
   const left = bounds.length ? Math.min(...bounds.map((item) => item.x)) : 0;
 
@@ -39,7 +71,9 @@ export function makeSvg(
     `<svg xmlns="http://www.w3.org/2000/svg" ` +
     `width="${width}" height="${height}" ` +
     `viewBox="${x} ${y} ${width} ${height}">` +
-    background + contents + "</svg>";
+    background +
+    contents +
+    "</svg>";
 
   return { source, width, height };
 }

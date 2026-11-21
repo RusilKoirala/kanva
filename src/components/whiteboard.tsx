@@ -1,5 +1,9 @@
 "use client";
 
+import { useMultiSelect } from "@/features/whiteboard/hooks/use-multi-select";
+import { useImageImport } from "@/features/whiteboard/hooks/use-image-import";
+import { SelectionOverlay } from "@/features/whiteboard/components/selection-overlay";
+
 import { ShapeView } from "@/features/whiteboard/components/shape";
 import { Toolbar } from "@/features/whiteboard/components/toolbar";
 import { useWhiteboard } from "@/features/whiteboard/hooks/use-whiteboard";
@@ -36,11 +40,17 @@ export function Whiteboard() {
   const contentRef = useRef<SVGGElement>(null);
   const extras = useWhiteboardExtras(board, canvasRef);
 
+  const imageRef = useRef<HTMLInputElement>(null);
+
+  const selection = useMultiSelect(board, extras);
+
+  const images = useImageImport(board, extras, canvasRef, selection.selectOnly);
+
   const [resolution, setResolution] = useState<1 | 2>(1);
   const [transparent, setTransaprent] = useState(false);
   const [exporting, setExporting] = useState(false);
 
-  const selected = extras.elements.find(
+  const selected = selection.element.find(
     (shape) => shape.id === board.selectedId,
   );
 
@@ -60,7 +70,7 @@ export function Whiteboard() {
     if (!layer) return;
     setExporting(true);
     try {
-      await savePng(layer, extras.elements, resolution, transparent);
+      await savePng(layer, selection.element, resolution, transparent);
 
       board.setNotice("png exported YAY");
     } catch (error) {
@@ -75,7 +85,7 @@ export function Whiteboard() {
     if (!layer) return;
 
     try {
-      const svg = makeSvg(layer, extras.elements, transparent);
+      const svg = makeSvg(layer, selection.element, transparent);
       download(svg.source, "kanva.svg", "image/svg+xml");
       board.setNotice("drawing exported as svg :D");
     } catch (error) {
@@ -170,6 +180,62 @@ export function Whiteboard() {
         onTransparentChange={setTransaprent}
         onExport={exportPng}
       />
+
+      <div className="flex flex-wrap items-center gap-2 border-b border-stone-200 p-2 text-xs">
+        <button
+          className="border border-stone-300 px-2 py-1"
+          aria-pressed={board.tool === "arrow"}
+          onClick={() => imageRef.current?.click()}
+        >
+          Arrow A
+        </button>
+
+        <button
+          className="border border-stone-300 px-2 py-1 disabled:opacity-40"
+          disabled={images.busy || !!extras.editing}
+          onClick={() => imageRef.current?.click()}
+        >
+          {images.busy ? "Adding image..." : "Add image"}
+        </button>
+
+        <input
+          ref={imageRef}
+          type="file"
+          accept="image/png,image/jpeg,image/webp"
+          className="hidden"
+          aria-label="Upload an image"
+          onChange={(event) => {
+            const file = event.target.files?.[0];
+            event.target.value = "";
+
+            if (file) void images.addFile(file);
+          }}
+        />
+
+        <span className="text-stone-500">
+          {selection.selectedIds.length} selected
+        </span>
+
+        <button
+          className="border border-stone-300 px-2 py-1 disabled:opacity-40"
+          disabled={!selection.selectedIds.length || !!extras.editing}
+          onClick={selection.duplicateSelection}
+        >
+          Duplicate
+        </button>
+
+        <button
+          className="border border-stone-300 px-2 py-1 disabled:opacity-40"
+          disabled={!selection.selectedIds.length || !!extras.editing}
+          onClick={selection.deleteSelection}
+        >
+          Delete Selected
+        </button>
+
+        <span className="text-stone-500">
+          tip: shift-click or drag empty space to select
+        </span>
+      </div>
 
       <section className="relative min-h-0 flex-1 overflow-hidden bg-stone-50">
         <svg
