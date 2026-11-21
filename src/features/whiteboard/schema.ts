@@ -8,7 +8,16 @@ const pointSchema = z.object({
 export const shapeSchema = z
   .object({
     id: z.string().uuid(),
-    kind: z.enum(["pen", "rectangle", "ellipse", "line", "text", "note"]),
+    kind: z.enum([
+      "pen",
+      "rectangle",
+      "ellipse",
+      "line",
+      "text",
+      "note",
+      "arrow",
+      "image",
+    ]),
     x: z.number().finite(),
     y: z.number().finite(),
     width: z.number().finite(),
@@ -17,6 +26,11 @@ export const shapeSchema = z
     strokeWidth: z.number().min(1).max(12),
     points: z.array(pointSchema).max(5000),
     text: z.string().max(5000).optional(),
+    imageData: z
+      .string()
+      .max(160000)
+      .regex(/^data:image\/(?:png|jpeg|webp);base64,[A-Za-z0-9+/]+={0,2}$/)
+      .optional(),
     fontSize: z.number().min(12).max(72).optional(),
     fill: z
       .string()
@@ -42,7 +56,7 @@ export const documentSchema = z
 
 export type Point = z.infer<typeof pointSchema>;
 export type Shape = z.infer<typeof shapeSchema>;
-export type Tool = Shape["kind"] | "select" | "erase";
+export type Tool = Exclude<Shape["kind"], "image"> | "select" | "erase";
 
 export function getBounds(shape: Shape) {
   if (shape.kind === "pen") {

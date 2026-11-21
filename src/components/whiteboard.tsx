@@ -4,7 +4,10 @@ import { ShapeView } from "@/features/whiteboard/components/shape";
 import { Toolbar } from "@/features/whiteboard/components/toolbar";
 import { useWhiteboard } from "@/features/whiteboard/hooks/use-whiteboard";
 import { getBounds } from "@/features/whiteboard/schema";
-import { useRef } from "react";
+import { useRef, useState } from "react";
+import { useWhiteboardExtras } from "@/features/whiteboard/hooks/use-whiteboard-extras";
+import { ExtraControls } from "@/features/whiteboard/components/extra-controls";
+import { makeSvg, savePng } from "@/features/whiteboard/lib/export-image";
 
 function download(content: string, filename: string, mimeType: string) {
   const blob = new Blob([content], {
@@ -30,7 +33,14 @@ export function Whiteboard() {
   const canvasRef = useRef<SVGSVGElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
-  const selected = board.elements.find(
+  const contentRef = useRef<SVGGElement>(null);
+  const extras = useWhiteboardExtras(board, canvasRef);
+
+  const [resolution, setResolution] = useState<1 | 2>(1);
+  const [transparent, setTransaprent] = useState(false);
+  const [exporting, setExporting] = useState(false);
+
+  const selected = extras.elements.find(
     (shape) => shape.id === board.selectedId,
   );
 
@@ -44,32 +54,33 @@ export function Whiteboard() {
     );
   }
 
+  async function exportPng() {
+    const layer = contentRef.current;
+
+    if (!layer) return;
+    setExporting(true);
+    try {
+      await savePng(layer, extras.elements, resolution, transparent);
+
+      board.setNotice("png exported YAY");
+    } catch (error) {
+      board.setNotice("error in exporting png " + error);
+    } finally {
+      setExporting(false);
+    }
+  }
+
   function exportSvg() {
-    const original = canvasRef.current;
-    if (!original) return;
+    const layer = contentRef.current;
+    if (!layer) return;
 
-    const clone = original.cloneNode(true) as SVGSVGElement;
-
-    clone
-      .querySelectorAll("[data-selection]")
-      .forEach((element) => element.remove());
-
-    clone.removeAttribute("class");
-
-    clone.removeAttribute("style");
-
-    clone.setAttribute("xmlns", "http://www.w3.org/2000/svg");
-
-    clone.setAttribute("width", "1600");
-    clone.setAttribute("height", "1000");
-
-    download(
-      new XMLSerializer().serializeToString(clone),
-      "kanva.svg",
-      "image/svg+xml",
-    );
-
-    board.setNotice("drawing exported as svg :D");
+    try {
+      const svg = makeSvg(layer, extras.elements, transparent);
+      download(svg.source, "kanva.svg", "image/svg+xml");
+      board.setNotice("drawing exported as svg :D");
+    } catch (error) {
+      board.setNotice("Error exporting svg " + error);
+    }
   }
 
   if (!board.ready) {
@@ -142,17 +153,28 @@ export function Whiteboard() {
         strokeWidth={board.strokeWidth}
         canUndo={board.canUndo}
         canRedo={board.canRedo}
-        onToolChange={board.setTool}
-        onColorChange={board.changeColor}
+        onToolChange={extras.changeTool}
+        onColorChange={extras.changeColor}
         onStrokeWidthChange={board.changeStrokeWidth}
         onUndo={board.undo}
         onRedo={board.redo}
       />
 
+      <ExtraControls
+        extras={extras}
+        tool={board.tool}
+        resolution={resolution}
+        transparent={transparent}
+        exporting={exporting}
+        onResolutionChange={setResolution}
+        onTransparentChange={setTransaprent}
+        onExport={exportPng}
+      />
+
       <section className="relative min-h-0 flex-1 overflow-hidden bg-stone-50">
         <svg
           ref={canvasRef}
-          viewBox="0 0 1600 1800"
+          viewBox={`${extras.view.x} ${extras.view.y} ${extras.view.width} ${extras.view.height}`}
           tabIndex={0}
           aria-label="drawing area :D"
           className="block size-full bg-white outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-violet-400"
@@ -165,12 +187,13 @@ export function Whiteboard() {
                   ? "not-allowed"
                   : "crosshair",
           }}
-          onPointerDown={board.onPointerDown}
-          onPointerMove={board.onPointerMove}
-          onPointerUp={board.onPointerUp}
-          onPointerCancel={board.onPointerCancel}
-          onLostPointerCapture={board.onPointerCancel}
-          onKeyDown={board.onKeyDown}
+          onPointerDown={extras.onPointerDown}
+          onPointerMove={extras.onPointerMove}
+          onPointerUp={extras.onPointerUp}
+          onPointerCancel={extras.onPointerCancel}
+          onLostPointerCapture={extras.onPointerCancel}
+          onKeyDown={extras.onKeyDown}
+          onDoubleClick={extras.onDoubleClick}
         >
           <defs>
             <pattern
@@ -183,27 +206,111 @@ export function Whiteboard() {
             </pattern>
           </defs>
 
-          <rect width="1600" height="1000" fill="url(#kanva-dots)" />
+          <rect
+            x={extras.view.x}
+            y={extras.view.y}
+            width={extras.view.width}
+            height={extras.view.height}
+            fill="url(#kanva-dots)"
+          />
 
-          {board.elements.map((shape) => (
-            <ShapeView key={shape.id} shape={shape} />
-          ))}
+          <g ref={contentRef}>
+            {extras.elements.map((shape) => (
+              <ShapeView key={shape.id} shape={shape} />
+            ))}
+          </g>
 
-          {bounds && (
-            <rect
-              data-selection="true"
-              x={bounds.x - 7}
-              y={bounds.y - 7}
-              width={bounds.width + 14}
-              height={bounds.height + 14}
-              fill="none"
-              stroke="#7c3aed"
-              strokeWidth={1.5}
-              strokeDasharray="6 4"
-              pointerEvents="none"
-            />
+          {bounds && !extras.editing && board.tool === "select" && (
+            <g data-selection="true">
+              <rect
+                x={bounds.x}
+                y={bounds.y}
+                width={Math.max(1, bounds.width)}
+                height={Math.max(1, bounds.height)}
+                fill="none"
+                stroke="#7c3aed"
+                strokeWidth={1.5 / extras.zoom}
+                strokeDasharray={`${6 / extras.zoom} ${4 / extras.zoom}`}
+                pointerEvents="none"
+              />
+
+              {(["nw", "ne", "sw", "se"] as const).map((corner) => {
+                const size = 12 / extras.zoom;
+                const x = corner.endsWith("w")
+                  ? bounds.x
+                  : bounds.x + bounds.width;
+
+                const y = corner.startsWith("n")
+                  ? bounds.y
+                  : bounds.y + bounds.height;
+
+                return (
+                  <rect
+                    key={corner}
+                    data-corner={corner}
+                    x={x - size / 2}
+                    y={y - size / 2}
+                    width={size}
+                    height={size}
+                    fill="white"
+                    stroke="#7c3aed"
+                    strokeWidth={1 / 5 / extras.zoom}
+                    style={{
+                      cursor:
+                        corner === "nw" || corner === "se"
+                          ? "nwse-resize"
+                          : "nesw-resize",
+                    }}
+                  />
+                );
+              })}
+            </g>
           )}
         </svg>
+
+        {extras.editing && (
+          <div className="absolute bottom-3 left-3 w-72 max-w-[90%] border border-stone-400 bg-white p-2 text-sm">
+            <label className="block">
+              {extras.editing.shape.kind === "note" ? "Sticky Note" : "text"}
+
+              <textarea
+                autoFocus
+                rows={4}
+                maxLength={5000}
+                value={extras.editing.shape.text ?? ""}
+                onChange={(event) => extras.changeText(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Escape") {
+                    extras.cancelEditing();
+                  }
+                  if (
+                    (event.ctrlKey || event.metaKey) &&
+                    event.key === "Enter"
+                  ) {
+                    extras.applyEditing();
+                  }
+                }}
+                className="mt-1 block w-full resize-y border border-stone-300 p-1 text-stone-900"
+              />
+            </label>
+
+            <div className="mt-2 flex gap-2">
+              <button
+                onClick={extras.applyEditing}
+                className="border border-stone-400 px-2 py-1"
+              >
+                Apply
+              </button>
+
+              <button
+                onClick={extras.cancelEditing}
+                className="border border-stone-300 px-2 py-1"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
       </section>
 
       <footer className="flex flex-wrap items-center justify-between gap-2 border-t border-stone-200 bg-white px-4 py-2 text-xs text-stone-500">
