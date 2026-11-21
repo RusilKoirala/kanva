@@ -73,7 +73,133 @@ export function useBoardLibrary(board: BoardApi) {
 
     if (!current.current) {
       try {
-      } catch (error) {}
+        const raw = localStorage.getItem(KEY);
+
+        if (raw) {
+          const saved = librarySchema.parse(JSON.parse(raw));
+
+          current.current = saved;
+
+          setLibrary(saved);
+
+          const active = saved.boards.find(
+            (item) => item.id === saved.activeId,
+          )!;
+
+          board.replaceScene(active.element);
+          return;
+        }
+      } catch {
+        board.setNotice("could not resotre board");
+      }
+
+      const first = {
+        id: crypto.randomUUID(),
+        name: "My first board",
+        elements: board.shapes,
+      };
+
+      write({
+        activeId: first.id,
+        boards: [first],
+      });
+
+      return;
     }
-  });
+
+    const next = snapshot();
+    if (next) write(next);
+  }, [board.ready, board.shapes]);
+
+  function switchBoard(id: string) {
+    const saved = snapshot();
+    if (!saved || saved.activeId === id) return;
+
+    const nextBoard = saved.boards.find((item) => item.id === id);
+    if (!nextBoard) return;
+
+    write({ ...saved, activeId: id });
+    board.replaceScene(nextBoard.element);
+  }
+
+  function createBoard() {
+    const saved = snapshot();
+
+    if (!saved) return;
+
+    if (saved.boards.length >= 20) {
+      board.setNotice("you can keep only 20 boards");
+      return;
+    }
+    const name = window.prompt("Board name", "Untitiled");
+    if (name === null) return;
+
+    const nextBoard = {
+      id: crypto.randomUUID(),
+      name: name.trim().slice(0, 60) || "Untitiled",
+      elements: [] as Shape[],
+    };
+    write({
+      activeId: nextBoard.id,
+      boards: [...saved.boards, nextBoard],
+    });
+  }
+
+  function renameBoard() {
+    const saved = snapshot();
+    if (!saved) return;
+
+    const active = saved.boards.find((item) => item.id === saved.activeId);
+
+    const name = window.prompt("Rename board", active.name);
+
+    if (name === null) return;
+
+    write({
+      ...saved,
+      boards: saved.boards.map((item) =>
+        item.id === saved.activeId
+          ? {
+              ...item,
+              name: name.trim().slice(0, 60) || "Untitiled",
+            }
+          : item,
+      ),
+    });
+  }
+
+  function deleteBoard() {
+    const saved = snapshot();
+    if (!saved) return;
+
+    if (!window.confirm("Delete this board? this cant be brought back ^-^")) {
+      return;
+    }
+
+    const remaining = saved.boards.filter((item) => item.id !== saved.activeId);
+
+    if (!remaining.length) {
+      remaining.push({
+        id: crypto.randomUUID(),
+        name: "Untititled",
+        element: [],
+      });
+    }
+
+    write({
+      activeId: remaining[0].id,
+      boards: remaining,
+    });
+
+    board.replaceScene(remaining[0].element);
+  }
+
+  return {
+    activeId: library?.activeId ?? "",
+    board: library?.activeId ?? [],
+    switchBoard,
+    createBoard,
+    renameBoard,
+    deleteBoard,
+  };
 }
