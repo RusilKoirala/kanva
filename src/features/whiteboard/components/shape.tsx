@@ -1,5 +1,6 @@
 import { Shape } from "../schema";
 import { TextShape } from "./text-shape";
+import { ArrowDetails } from "./arrow-details";
 
 type Props = {
   shape: Shape;
@@ -42,7 +43,7 @@ export function ShapeView({ shape }: Props) {
         />
       )}
 
-      {shape.kind === "line" && (
+      {(shape.kind === "line" || shape.kind === "arrow") && (
         <>
           <line
             x1={0}
@@ -82,6 +83,17 @@ export function ShapeView({ shape }: Props) {
 
       {(shape.kind === "text" || shape.kind === "note") && (
         <TextShape shape={shape} />
+      )}
+
+      {shape.kind === "arrow" && <ArrowDetails shape={shape} />}
+
+      {shape.kind === "image" && shape.imageData && (
+        <image
+          href={shape.imageData}
+          width={shape.width}
+          height={shape.height}
+          preserveAspectRatio="xMidYMid meet"
+        />
       )}
     </g>
   );
