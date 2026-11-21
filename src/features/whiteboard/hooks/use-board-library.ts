@@ -19,7 +19,7 @@ const librarySchema = z
         z.object({
           id: z.string().uuid(),
           name: z.string().min(1).max(60),
-          element: z.array(shapeSchema).max(1000),
+          elements: z.array(shapeSchema).max(1000),
         }),
       )
       .min(1)
@@ -32,8 +32,8 @@ const librarySchema = z
         library.boards.length &&
       library.boards.every(
         (item) =>
-          new Set(item.element.map((shape) => shape.id)).size ===
-          item.element.length,
+          new Set(item.elements.map((shape) => shape.id)).size ===
+          item.elements.length,
       ),
   );
 
@@ -86,7 +86,7 @@ export function useBoardLibrary(board: BoardApi) {
             (item) => item.id === saved.activeId,
           )!;
 
-          board.replaceScene(active.element);
+          board.replaceScene(active.elements);
           return;
         }
       } catch {
@@ -119,7 +119,7 @@ export function useBoardLibrary(board: BoardApi) {
     if (!nextBoard) return;
 
     write({ ...saved, activeId: id });
-    board.replaceScene(nextBoard.element);
+    board.replaceScene(nextBoard.elements);
   }
 
   function createBoard() {
@@ -143,6 +143,7 @@ export function useBoardLibrary(board: BoardApi) {
       activeId: nextBoard.id,
       boards: [...saved.boards, nextBoard],
     });
+    board.replaceScene(nextBoard.elements);
   }
 
   function renameBoard() {
@@ -150,6 +151,7 @@ export function useBoardLibrary(board: BoardApi) {
     if (!saved) return;
 
     const active = saved.boards.find((item) => item.id === saved.activeId);
+    if (!active) return;
 
     const name = window.prompt("Rename board", active.name);
 
@@ -182,7 +184,7 @@ export function useBoardLibrary(board: BoardApi) {
       remaining.push({
         id: crypto.randomUUID(),
         name: "Untititled",
-        element: [],
+        elements: [],
       });
     }
 
@@ -191,12 +193,12 @@ export function useBoardLibrary(board: BoardApi) {
       boards: remaining,
     });
 
-    board.replaceScene(remaining[0].element);
+    board.replaceScene(remaining[0].elements);
   }
 
   return {
     activeId: library?.activeId ?? "",
-    board: library?.activeId ?? [],
+    boards: library?.boards ?? [],
     switchBoard,
     createBoard,
     renameBoard,

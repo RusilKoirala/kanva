@@ -430,7 +430,8 @@ export function useWhiteboard() {
     redo,
     loadDocument,
     setNotice,
-    selectShape: selectedId,
+    commit,
+    selectShape: setSelectedId,
 
     replaceScene: (next: Shape[]) => {
       cancelGesture();
