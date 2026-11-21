@@ -1,4 +1,3 @@
-import he from "zod/v4/locales/he.cjs";
 import { getBounds } from "../schema";
 
 import type { Point, Shape } from "../schema";
@@ -86,7 +85,7 @@ export function resizeShape(
       12,
       Math.min(
         72,
-        (Math.round(shape.fontSize ?? 20) * width) / Math.max(1, bounds.width),
+        Math.round(((shape.fontSize ?? 20) * width) / Math.max(1, bounds.width)),
       ),
     );
 
@@ -109,7 +108,7 @@ export function resizeShape(
       points: shape.points.map((point) => ({
         x: ((shape.x + point.x - bounds.x) / Math.max(1, bounds.width)) * width,
         y:
-          ((shape.x + point.y - bounds.y) / Math.max(1, bounds.height)) *
+          ((shape.y + point.y - bounds.y) / Math.max(1, bounds.height)) *
           height,
       })),
     };

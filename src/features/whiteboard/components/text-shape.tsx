@@ -14,7 +14,7 @@ export function TextShape({ shape }: { shape: Shape }) {
   const visibleLines = note
     ? lines.slice(
         0,
-        Math.max(1, Math.floor(shape.height - padding * 2) / lineHeight),
+        Math.max(1, Math.floor((shape.height - padding * 2) / lineHeight)),
       )
     : lines;
 
