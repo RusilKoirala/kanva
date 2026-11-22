@@ -12,7 +12,6 @@ import type { Corner } from "../lib/geometry";
 import type { useWhiteboard } from "./use-whiteboard";
 
 import { useBoardLibrary } from "./use-board-library";
-import { eventBuildCompleted } from "next/dist/telemetry/events";
 
 type BoardApi = ReturnType<typeof useWhiteboard>;
 

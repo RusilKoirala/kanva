@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { z } from "zod";
 
 import { shapeSchema } from "../schema";
@@ -42,31 +42,35 @@ type Library = z.infer<typeof librarySchema>;
 export function useBoardLibrary(board: BoardApi) {
   const current = useRef<Library | null>(null);
   const [library, setLibrary] = useState<Library | null>(null);
+  const latestBoard = useRef(board);
+  latestBoard.current = board;
 
-  function write(next: Library) {
+  const write = useCallback((next: Library) => {
     current.current = next;
     setLibrary(next);
 
     try {
       localStorage.setItem(KEY, JSON.stringify(next));
     } catch {
-      board.setNotice(
+      latestBoard.current.setNotice(
         "board storage is full or unavailablee . please export to keep a copy safe",
       );
     }
-  }
+  }, []);
 
-  function snapshot(): Library | null {
+  const snapshot = useCallback((): Library | null => {
     const value = current.current;
     if (!value) return null;
 
     return {
       ...value,
       boards: value.boards.map((item) =>
-        item.id === value.activeId ? { ...item, elements: board.shapes } : item,
+        item.id === value.activeId
+          ? { ...item, elements: latestBoard.current.shapes }
+          : item,
       ),
     };
-  }
+  }, []);
 
   useEffect(() => {
     if (!board.ready) return;
@@ -86,11 +90,11 @@ export function useBoardLibrary(board: BoardApi) {
             (item) => item.id === saved.activeId,
           )!;
 
-          board.replaceScene(active.elements);
+          latestBoard.current.replaceScene(active.elements);
           return;
         }
       } catch {
-        board.setNotice("could not resotre board");
+        latestBoard.current.setNotice("could not resotre board");
       }
 
       const first = {
@@ -109,7 +113,7 @@ export function useBoardLibrary(board: BoardApi) {
 
     const next = snapshot();
     if (next) write(next);
-  }, [board.ready, board.shapes]);
+  }, [board.ready, board.shapes, snapshot, write]);
 
   function switchBoard(id: string) {
     const saved = snapshot();
