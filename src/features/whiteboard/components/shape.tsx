@@ -1,6 +1,7 @@
 import { Shape } from "../schema";
 import { TextShape } from "./text-shape";
 import { ArrowDetails } from "./arrow-details";
+import { getStrokeDasharray } from "../lib/shape-style";
 
 type Props = {
   shape: Shape;
@@ -14,12 +15,17 @@ export function ShapeView({ shape }: Props) {
     strokeWidth: shape.strokeWidth,
     strokeLinecap: "round" as const,
     strokeLinejoin: "round" as const,
+    strokeDasharray: getStrokeDasharray(shape),
   };
 
   const penPoints = points.map((point) => `${point.x}, ${point.y}`).join(" ");
 
   return (
-    <g data-shape-id={shape.id} transform={`translate(${shape.x} ${shape.y})`}>
+    <g
+      data-shape-id={shape.id}
+      transform={`translate(${shape.x} ${shape.y})`}
+      opacity={shape.opacity ?? 1}
+    >
       {shape.kind === "rectangle" && (
         <rect
           x={Math.min(0, width)}
@@ -27,7 +33,7 @@ export function ShapeView({ shape }: Props) {
           width={Math.abs(width)}
           height={Math.abs(height)}
           rx={3}
-          fill="transparent"
+          fill={shape.fill ?? "transparent"}
           {...stroke}
         />
       )}
@@ -38,7 +44,7 @@ export function ShapeView({ shape }: Props) {
           cy={height / 2}
           rx={Math.abs(width) / 2}
           ry={Math.abs(height) / 2}
-          fill="transparent"
+          fill={shape.fill ?? "transparent"}
           {...stroke}
         />
       )}

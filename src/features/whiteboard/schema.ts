@@ -23,7 +23,9 @@ export const shapeSchema = z
     width: z.number().finite(),
     height: z.number().finite(),
     color: z.string().regex(/^#[0-9a-f]{6}$/i),
+    opacity: z.number().min(0).max(1).optional(),
     strokeWidth: z.number().min(1).max(12),
+    strokeStyle: z.enum(["solid", "dashed", "dotted"]).optional(),
     points: z.array(pointSchema).max(5000),
     text: z.string().max(5000).optional(),
     imageData: z
