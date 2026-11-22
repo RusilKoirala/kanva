@@ -12,6 +12,7 @@ import type { Corner } from "../lib/geometry";
 import type { useWhiteboard } from "./use-whiteboard";
 
 import { useBoardLibrary } from "./use-board-library";
+import { eventBuildCompleted } from "next/dist/telemetry/events";
 
 type BoardApi = ReturnType<typeof useWhiteboard>;
 
@@ -300,8 +301,15 @@ export function useWhiteboardExtras(
     if (editing) return;
 
     const svg = event.currentTarget;
+    const emptySpace = !(event.target as Element).closest(
+      "[data-shape-id], [data-corner]",
+    );
 
-    if (event.button === 1 || (event.button === 0 && spaceDown.current)) {
+    if (
+      event.button === 1 ||
+      (event.button === 0 && spaceDown.current) ||
+      (event.button === 0 && board.tool && emptySpace && !event.shiftKey)
+    ) {
       const matrix = svg.getScreenCTM();
 
       if (!matrix) return;

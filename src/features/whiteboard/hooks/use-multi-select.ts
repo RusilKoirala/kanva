@@ -131,8 +131,20 @@ export function useMultiSelect(board: BoardApi, extras: ExtrasApi) {
       "[data-shape-id], [data-corner]",
     );
 
-    if (event.button !== 0 || !event.isPrimary || board.tool !== "select")
-      const point = getPoint(event);
+    if (
+      event.button !== 0 ||
+      !event.isPrimary ||
+      board.tool !== "select" ||
+      extras.editing ||
+      extras.isSpaceDown() ||
+      handle ||
+      (emptySpace && !event.shiftKey)
+    ) {
+      extras.onPointerDown(event);
+      return;
+    }
+
+    const point = getPoint(event);
     if (!point) return;
 
     const target = (event.target as Element).closest("[data-shape-id]");

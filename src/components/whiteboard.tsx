@@ -4,6 +4,12 @@ import { useMultiSelect } from "@/features/whiteboard/hooks/use-multi-select";
 import { useImageImport } from "@/features/whiteboard/hooks/use-image-import";
 import { SelectionOverlay } from "@/features/whiteboard/components/selection-overlay";
 
+import { StyleControls } from "@/features/whiteboard/components/style-controls";
+
+import { applyShapeStyle } from "@/features/whiteboard/lib/shape-style";
+
+import type { StylePatch } from "@/features/whiteboard/lib/shape-style";
+
 import { ShapeView } from "@/features/whiteboard/components/shape";
 import { Toolbar } from "@/features/whiteboard/components/toolbar";
 import { useWhiteboard } from "@/features/whiteboard/hooks/use-whiteboard";
@@ -50,11 +56,35 @@ export function Whiteboard() {
   const [transparent, setTransaprent] = useState(false);
   const [exporting, setExporting] = useState(false);
 
+  const [toolbarOpen, setToolbarOpen] = useState(false);
+
   const selected = selection.element.find(
     (shape) => shape.id === board.selectedId,
   );
 
   const bounds = selected ? getBounds(selected) : null;
+
+  const styleTargets = board.shapes.filter((shape) =>
+    selection.selectedIds.includes(shape.id),
+  );
+
+  function changeSelectedStyle(patch: StylePatch) {
+    if (
+      extras.editing ||
+      extras.isInteracting() ||
+      !selection.selectedIds.length
+    ) {
+      return;
+    }
+
+    const ids = new Set(selection.selectedIds);
+
+    board.commit(
+      board.shapes.map((shape) =>
+        ids.has(shape.id) ? applyShapeStyle(shape, patch) : shape,
+      ),
+    );
+  }
 
   function exportJson() {
     download(
@@ -159,85 +189,118 @@ export function Whiteboard() {
 
       <Toolbar
         tool={board.tool}
-        color={board.color}
+        color={
+          extras.editing?.shape.color ??
+          styleTargets.find((shape) => shape.kind !== "image")?.color ??
+          board.color
+        }
         strokeWidth={board.strokeWidth}
         canUndo={board.canUndo}
         canRedo={board.canRedo}
         onToolChange={extras.changeTool}
-        onColorChange={extras.changeColor}
+        onColorChange={(color) => {
+          if (
+            !extras.editing &&
+            styleTargets.some((shape) => shape.kind !== "image")
+          ) {
+            changeSelectedStyle({ color });
+          } else {
+            extras.changeColor(color);
+          }
+        }}
         onStrokeWidthChange={board.changeStrokeWidth}
         onUndo={board.undo}
         onRedo={board.redo}
       />
 
-      <ExtraControls
-        extras={extras}
-        tool={board.tool}
-        resolution={resolution}
-        transparent={transparent}
-        exporting={exporting}
-        onResolutionChange={setResolution}
-        onTransparentChange={setTransaprent}
-        onExport={exportPng}
-      />
-
-      <div className="flex flex-wrap items-center gap-2 border-b border-stone-200 p-2 text-xs">
-        <button
-          className="border border-stone-300 px-2 py-1"
-          aria-pressed={board.tool === "arrow"}
-          onClick={() => {
-            selection.clearSelection();
-            extras.changeTool("arrow");
-          }}
-        >
-          Arrow A
-        </button>
-
-        <button
-          className="border border-stone-300 px-2 py-1 disabled:opacity-40"
-          disabled={images.busy || !!extras.editing}
-          onClick={() => imageRef.current?.click()}
-        >
-          {images.busy ? "Adding image..." : "Add image"}
-        </button>
-
-        <input
-          ref={imageRef}
-          type="file"
-          accept="image/png,image/jpeg,image/webp"
-          className="hidden"
-          aria-label="Upload an image"
-          onChange={(event) => {
-            const file = event.target.files?.[0];
-            event.target.value = "";
-
-            if (file) void images.addFile(file);
-          }}
+      <div id="whiteboard-tools" hidden={!toolbarOpen} className="shrink-0">
+        <ExtraControls
+          extras={extras}
+          tool={board.tool}
+          resolution={resolution}
+          transparent={transparent}
+          exporting={exporting}
+          onResolutionChange={setResolution}
+          onTransparentChange={setTransaprent}
+          onExport={exportPng}
         />
 
-        <span className="text-stone-500">
-          {selection.selectedIds.length} selected
-        </span>
+        <StyleControls
+          shapes={styleTargets}
+          disabled={!!extras.editing || images.busy}
+          onChange={changeSelectedStyle}
+        />
 
+        <div className="flex flex-wrap items-center gap-2 border-b border-stone-200 p-2 text-xs">
+          <button
+            className="border border-stone-300 px-2 py-1"
+            aria-pressed={board.tool === "arrow"}
+            onClick={() => {
+              selection.clearSelection();
+              extras.changeTool("arrow");
+            }}
+          >
+            Arrow A
+          </button>
+
+          <button
+            className="border border-stone-300 px-2 py-1 disabled:opacity-40"
+            disabled={images.busy || !!extras.editing}
+            onClick={() => imageRef.current?.click()}
+          >
+            {images.busy ? "Adding image..." : "Add image"}
+          </button>
+
+          <input
+            ref={imageRef}
+            type="file"
+            accept="image/png,image/jpeg,image/webp"
+            className="hidden"
+            aria-label="Upload an image"
+            onChange={(event) => {
+              const file = event.target.files?.[0];
+              event.target.value = "";
+
+              if (file) void images.addFile(file);
+            }}
+          />
+
+          <span className="text-stone-500">
+            {selection.selectedIds.length} selected
+          </span>
+
+          <button
+            className="border border-stone-300 px-2 py-1 disabled:opacity-40"
+            disabled={!selection.selectedIds.length || !!extras.editing}
+            onClick={selection.duplicateSelection}
+          >
+            Duplicate
+          </button>
+
+          <button
+            className="border border-stone-300 px-2 py-1 disabled:opacity-40"
+            disabled={!selection.selectedIds.length || !!extras.editing}
+            onClick={selection.deleteSelection}
+          >
+            Delete Selected
+          </button>
+
+          <span className="text-stone-500">
+            tip: shift-click or drag empty space to select
+          </span>
+        </div>
+      </div>
+
+      <div className="flex shrink-0 justify-center border-b border-stone-200 bg-white">
         <button
-          className="border border-stone-300 px-2 py-1 disabled:opacity-40"
-          disabled={!selection.selectedIds.length || !!extras.editing}
-          onClick={selection.duplicateSelection}
+          type="button"
+          aria-expanded={toolbarOpen}
+          aria-controls="whiteboard-tools"
+          onClick={() => setToolbarOpen((open) => !open)}
+          className="px-4 py-1 text-stone-600 hover:bg-stone-100  focus-visible:outline focus-visible:outline-2"
         >
-          Duplicate
+          {toolbarOpen ? "Hide tools" : "Show tools"}
         </button>
-
-        <button
-          className="border border-stone-300 px-2 py-1 disabled:opacity-40"
-          disabled={!selection.selectedIds.length || !!extras.editing}
-          onClick={selection.deleteSelection}
-        >
-          Delete Selected
-        </button>
-
-        <span className="text-stone-500">
-          tip: shift-click or drag empty space to select
-        </span>
       </div>
 
       <section className="relative min-h-0 flex-1 overflow-hidden bg-stone-50">
