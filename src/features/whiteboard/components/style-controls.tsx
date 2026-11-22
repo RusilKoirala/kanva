@@ -96,57 +96,54 @@ export function StyleControls({ shapes, disabled = false, onChange }: Props) {
           className="h-7 w-8 cursor-pointer border border border-stone-300 disabled:opacity-30"
         />
       </label>
-        <button
-          type="button"
-          disabled={!filledShape}
-          onClick={() => onChange({ fill: undefined })}
+      <button
+        type="button"
+        disabled={!filledShape}
+        onClick={() => onChange({ fill: undefined })}
+        className={`${inputClass} disabled:opacity-30`}
+      >
+        No fill
+      </button>
+      <label className="flex items-center gap-1">
+        Opacity
+        <select
+          value={opacity}
+          onChange={(event) =>
+            onChange({
+              opacity: Number(event.target.value) / 100,
+            })
+          }
+          className={inputClass}
+        >
+          {opacityOptions.map((value) => (
+            <option key={value} value={value}>
+              {value}%
+            </option>
+          ))}
+        </select>
+      </label>
+      <label className="flex items-center gap-1">
+        Line
+        <select
+          value={outlinedShape?.strokeStyle ?? "solid"}
+          disabled={!outlinedShape}
+          onChange={(event) =>
+            onChange({
+              strokeStyle: event.target.value as "solid" | "dashed" | "dotted",
+            })
+          }
           className={`${inputClass} disabled:opacity-30`}
         >
-          No fill
-        </button>
-        <label className="flex items-center gap-1">
-          Opacity
-          <select
-            value={opacity}
-            onChange={(event) =>
-              onChange({
-                opacity: Number(event.target.value) / 100,
-              })
-            }
-            className={inputClass}
-          >
-            {opacityOptions.map((value) => (
-              <option key={value} value={value}>
-                {value}%
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="flex items-center gap-1">
-          Line
-          <select
-            value={outlinedShape?.strokeStyle ?? "solid"}
-            disabled={!outlinedShape}
-            onChange={(event) =>
-              onChange({
-                strokeStyle: event.target.value as
-                  | "solid"
-                  | "dashed"
-                  | "dotted",
-              })
-            }
-            className={`${inputClass} disabled:opacity-30`}
-          >
-            <option value="solid">Solid</option>
-            <option value="dashed">Dashed</option>
-            <option value="dotted">Dotted</option>
-          </select>
-        </label>
-        {shapes.length > 1 && (
-          <span className="text-stone-500">
-            value show the first applicable object
-          </span>
-        )}
+          <option value="solid">Solid</option>
+          <option value="dashed">Dashed</option>
+          <option value="dotted">Dotted</option>
+        </select>
+      </label>
+      {shapes.length > 1 && (
+        <span className="text-stone-500">
+          value show the first applicable object
+        </span>
+      )}
     </fieldset>
   );
 }
