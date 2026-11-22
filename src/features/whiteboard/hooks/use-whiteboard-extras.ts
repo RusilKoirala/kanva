@@ -307,7 +307,7 @@ export function useWhiteboardExtras(
     if (
       event.button === 1 ||
       (event.button === 0 && spaceDown.current) ||
-      (event.button === 0 && board.tool && emptySpace && !event.shiftKey)
+      (event.button === 0 && board.tool === "select" && emptySpace && !event.shiftKey)
     ) {
       const matrix = svg.getScreenCTM();
 
