@@ -127,19 +127,12 @@ export function useMultiSelect(board: BoardApi, extras: ExtrasApi) {
 
     const handle = (event.target as Element).closest("[data-corner]");
 
-    if (
-      event.button !== 0 ||
-      !event.isPrimary ||
-      board.tool !== "select" ||
-      extras.editing ||
-      extras.isSpaceDown() ||
-      handle
-    ) {
-      extras.onPointerDown(event);
-      return;
-    }
+    const emptySpace = !(event.target as Element).closest(
+      "[data-shape-id], [data-corner]",
+    );
 
-    const point = getPoint(event);
+    if (event.button !== 0 || !event.isPrimary || board.tool !== "select")
+      const point = getPoint(event);
     if (!point) return;
 
     const target = (event.target as Element).closest("[data-shape-id]");
@@ -180,25 +173,25 @@ export function useMultiSelect(board: BoardApi, extras: ExtrasApi) {
     }
 
     if (!hit) {
-        event.preventDefault();
-        event.currentTarget.focus();
+      event.preventDefault();
+      event.currentTarget.focus();
 
-        const initialIds = event.shiftKey ? selectedIds : [];
+      const initialIds = event.shiftKey ? selectedIds : [];
 
-        gesture.current = {
-            mode: "box",
-            pointerId: event.pointerId,
-            start: point,
-            initialIds
-        }
+      gesture.current = {
+        mode: "box",
+        pointerId: event.pointerId,
+        start: point,
+        initialIds,
+      };
 
-        selectIds(initialIds);
+      selectIds(initialIds);
 
-        setMarquee(makeBox(point,point));
+      setMarquee(makeBox(point, point));
 
-        extras.setExternalGesture(true);
-        event.currentTarget.setPointerCapture(event.pointerId);
-        return;
+      extras.setExternalGesture(true);
+      event.currentTarget.setPointerCapture(event.pointerId);
+      return;
     }
 
     setIds(null);
@@ -209,72 +202,73 @@ export function useMultiSelect(board: BoardApi, extras: ExtrasApi) {
     const active = gesture.current;
 
     if (!active) {
-        extras.onPointerMove(event);
-        return
+      extras.onPointerMove(event);
+      return;
     }
 
-    if (active.pointerId !== event.pointerId) return
+    if (active.pointerId !== event.pointerId) return;
 
     const point = getPoint(event);
 
     if (!point) return;
 
     if (active.mode === "box") {
-        const box = makeBox(active.start, point);
-        setMarquee(box);
+      const box = makeBox(active.start, point);
+      setMarquee(box);
 
-        const touched = board.shapes
-        .filter((shape)=> intersects(box,getBounds(shape)))
-        .map((shape)=> shape.id)
+      const touched = board.shapes
+        .filter((shape) => intersects(box, getBounds(shape)))
+        .map((shape) => shape.id);
 
-        selectIds([...active.initialIds, ...touched]);
-        return;
+      selectIds([...active.initialIds, ...touched]);
+      return;
     }
 
     const dx = point.x - active.start.x;
     const dy = point.y - active.start.y;
 
-    active.latest = active.base.map((shape)=> active.ids.includes(shape.id) ? {
-        ...shape,
-        x: shape.x + dx,
-        y: shape.y + dy,
-    }
-    :shape
+    active.latest = active.base.map((shape) =>
+      active.ids.includes(shape.id)
+        ? {
+            ...shape,
+            x: shape.x + dx,
+            y: shape.y + dy,
+          }
+        : shape,
     );
     setPreview(active.latest);
   }
 
-  function onPointerUp(event: PointerEvent <SVGSVGElement>) {
+  function onPointerUp(event: PointerEvent<SVGSVGElement>) {
     const active = gesture.current;
 
     if (!active) {
-        extras.onPointerUp(event);
-        return
+      extras.onPointerUp(event);
+      return;
     }
 
-    if (active.pointerId!== event.pointerId ) return
+    if (active.pointerId !== event.pointerId) return;
 
     onPointerMove(event);
 
     if (active.mode === "move") {
-        board.commit(active.latest)
+      board.commit(active.latest);
     }
 
-    cancel()
+    cancel();
   }
-
 
   function onLostPointerCapture(event: PointerEvent<SVGSVGElement>) {
     const active = gesture.current;
 
     if (active) {
-        if (active.pointerId !== event.pointerId) return;
+      if (active.pointerId !== event.pointerId) return;
 
-        if (active.mode === "move") {
-            board.commit(active.latest);
-        }
+      if (active.mode === "move") {
+        board.commit(active.latest);
+      }
 
-        cancel();
+      cancel();
     }
 
     extras.onLostPointerCapture(event);
@@ -282,38 +276,39 @@ export function useMultiSelect(board: BoardApi, extras: ExtrasApi) {
 
   function onPointerCancel(event?: PointerEvent<SVGSVGElement>) {
     if (event) {
-        onLostPointerCapture(event);
-        return;
+      onLostPointerCapture(event);
+      return;
     }
 
     const active = gesture.current;
 
     if (active?.mode === "box") {
-        selectIds(active.initialIds);
+      selectIds(active.initialIds);
     }
 
     cancel();
     extras.onPointerCancel();
-
   }
 
   function duplicateSelection() {
-    if (!selectedIds.length || extras.editing) return
+    if (!selectedIds.length || extras.editing) return;
 
-    const copies = board.shapes.filter((shape)=> selectedIds.includes(shape.id)).map((shape)=> ({
+    const copies = board.shapes
+      .filter((shape) => selectedIds.includes(shape.id))
+      .map((shape) => ({
         ...shape,
         id: crypto.randomUUID(),
-        x: shape.x +24,
-        y: shape.y +24,
-    }))
+        x: shape.x + 24,
+        y: shape.y + 24,
+      }));
 
-    if (board.shapes.length+ copies.length > 1000) {
-        board.setNotice("this would exceed the 1000 shape limit i kept");
-        return;
+    if (board.shapes.length + copies.length > 1000) {
+      board.setNotice("this would exceed the 1000 shape limit i kept");
+      return;
     }
 
     board.commit([...board.shapes, ...copies]);
-    selectIds(copies.map((shape)=> shape.id));
+    selectIds(copies.map((shape) => shape.id));
   }
 
   function deleteSelection() {
@@ -322,15 +317,12 @@ export function useMultiSelect(board: BoardApi, extras: ExtrasApi) {
     cancel();
 
     board.commit(
-        board.shapes.filter(
-            (shape)=> !selectedIds.includes(shape.id)
-        )
+      board.shapes.filter((shape) => !selectedIds.includes(shape.id)),
     );
 
     setIds(null);
     board.selectShape(null);
   }
-
 
   function onKeyDown(event: KeyboardEvent<SVGSVGElement>) {
     if (extras.editing) return;
@@ -339,38 +331,39 @@ export function useMultiSelect(board: BoardApi, extras: ExtrasApi) {
     const command = event.ctrlKey || event.metaKey;
 
     if (command && key === "a") {
-        event.preventDefault();
-        cancel();
-        extras.changeTool("select");
-        selectIds(board.shapes.map((shape)=> shape.id))
-        return
+      event.preventDefault();
+      cancel();
+      extras.changeTool("select");
+      selectIds(board.shapes.map((shape) => shape.id));
+      return;
     }
 
     if (command && key === "d" && selectedIds.length) {
-        event.preventDefault();
-        cancel();
-        duplicateSelection();
-        return;
+      event.preventDefault();
+      cancel();
+      duplicateSelection();
+      return;
     }
 
     if (
-        !command &&
-        (event.key === "Delete" || event.key === "Backspace") && selectedIds.length
+      !command &&
+      (event.key === "Delete" || event.key === "Backspace") &&
+      selectedIds.length
     ) {
-        event.preventDefault();
-        deleteSelection();
-        return;
+      event.preventDefault();
+      deleteSelection();
+      return;
     }
 
     if (event.key === "Escape" || (command && (key === "z" || key === "y"))) {
-        cancel();
+      cancel();
     }
 
     if (event.key === "Escape") {
-        setIds(null);
+      setIds(null);
     }
 
-    extras.onKeyDown(event)
+    extras.onKeyDown(event);
   }
 
   return {
@@ -387,5 +380,5 @@ export function useMultiSelect(board: BoardApi, extras: ExtrasApi) {
     onPointerCancel,
     onLostPointerCapture,
     onKeyDown,
-  }
+  };
 }
